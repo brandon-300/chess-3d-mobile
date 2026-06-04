@@ -18,7 +18,7 @@ workflows:
       - name: Install dependencies
         script: |
           cd $BITRISE_SOURCE_DIR
-          npm ci --prefer-offline --no-audit
+          npm install
       - name: Build web assets with Vite
         script: |
           cd $BITRISE_SOURCE_DIR
