@@ -1,16 +1,17 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  // root: 'src', // Remove or comment out this line
+  // 'root' is removed so it defaults to the project root
   build: {
-    outDir: '../dist',
+    // Ensuring it outputs to the 'dist' folder
+    outDir: 'dist', 
     sourcemap: false,
     rollupOptions: {
-      input: 'src/index.html',
+      // Explicitly pointing to where index.html is actually located
+      input: 'src/index.html', 
     },
   },
   server: {
     port: 3000,
-    strictPort: false,
   },
-})
+});
