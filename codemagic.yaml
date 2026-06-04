@@ -10,12 +10,15 @@ workflows:
     scripts:
       - name: Install dependencies
         script: |
+          cd $BITRISE_SOURCE_DIR
           npm install
       - name: Build web assets
         script: |
+          cd $BITRISE_SOURCE_DIR
           npm run build
       - name: Sync Capacitor
         script: |
+          cd $BITRISE_SOURCE_DIR
           npx cap sync android
       - name: Build Android debug APK
         script: |
