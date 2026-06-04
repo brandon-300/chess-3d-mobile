@@ -1,10 +1,7 @@
 workflows:
   android-debug:
     name: Android Debug Build
-    # Removed node versioning to prevent installation errors
-    environment:
-      # If you specifically need a certain version, uncomment the next line
-      # node: 20 
+    # Removed the 'environment' block completely as it was causing the validation error
     scripts:
       - name: Install dependencies
         script: |
