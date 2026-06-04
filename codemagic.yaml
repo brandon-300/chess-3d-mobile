@@ -8,10 +8,25 @@ workflows:
       events:
         - push
     scripts:
+      - name: Check environment
+        script: |
+          cd $BITRISE_SOURCE_DIR
+          pwd
+          ls -la
+          node --version
+          npm --version
+      - name: Check package.json
+        script: |
+          cd $BITRISE_SOURCE_DIR
+          cat package.json | grep -A 20 '"scripts"'
       - name: Install dependencies
         script: |
           cd $BITRISE_SOURCE_DIR
-          npm install
+          npm ci --prefer-offline --no-audit
+      - name: Verify npm scripts
+        script: |
+          cd $BITRISE_SOURCE_DIR
+          npm run
       - name: Build web assets
         script: |
           cd $BITRISE_SOURCE_DIR
@@ -23,7 +38,7 @@ workflows:
           npx cap sync android
       - name: Build Android debug APK
         script: |
-          cd android
+          cd $BITRISE_SOURCE_DIR/android
           ./gradlew assembleDebug
     artifacts:
       - android/app/build/outputs/apk/debug/**/*.apk
