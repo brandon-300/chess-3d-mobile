@@ -1,0 +1,45 @@
+{
+  "name": "chess-3d-mobile",
+  "version": "1.0.0",
+  "description": "3D Multiplayer Chess - Native Mobile App",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "cap:add:ios": "cap add ios",
+    "cap:add:android": "cap add android",
+    "cap:sync": "cap sync",
+    "cap:open:ios": "cap open ios",
+    "cap:open:android": "cap open android",
+    "cap:run:ios": "cap run ios",
+    "cap:run:android": "cap run android",
+    "cap:build:ios": "cap build ios",
+    "cap:build:android": "cap build android",
+    "ios": "npm run build && npm run cap:sync && npm run cap:open:ios",
+    "android": "npm run build && npm run cap:sync && npm run cap:open:android",
+    "test:ios": "npm run build && npm run cap:sync && npm run cap:run:ios",
+    "test:android": "npm run build && npm run cap:sync && npm run cap:run:android"
+  },
+  "dependencies": {
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/browser": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/device": "^6.0.0",
+    "@capacitor/keyboard": "^6.0.0",
+    "@capacitor/push-notifications": "^6.0.0",
+    "@capacitor/screen-orientation": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0",
+    "three": "^r128"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
