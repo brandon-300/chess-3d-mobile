@@ -14,14 +14,6 @@ workflows:
       events:
         - push
         - pull_request
-      branch:
-        patterns:
-          - pattern: develop
-            include: true
-          - pattern: main
-            include: true
-          - pattern: master
-            include: true
     scripts:
       - name: Install dependencies
         script: |
