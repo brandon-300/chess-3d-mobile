@@ -18,7 +18,7 @@ workflows:
       - name: Check package.json
         script: |
           cd $BITRISE_SOURCE_DIR
-          cat package.json | grep -A 20 '"scripts"'
+          cat package.json
       - name: Install dependencies
         script: |
           cd $BITRISE_SOURCE_DIR
