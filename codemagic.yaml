@@ -16,6 +16,7 @@ workflows:
         script: |
           cd $BITRISE_SOURCE_DIR
           npm run build
+          ls -la dist/
       - name: Sync Capacitor
         script: |
           cd $BITRISE_SOURCE_DIR
