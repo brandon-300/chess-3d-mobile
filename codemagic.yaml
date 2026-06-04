@@ -4,144 +4,23 @@ workflows:
     instance_type: linux
     max_build_duration: 60
     environment:
-      android_signing:
-        - keystore_reference
-      vars:
-        PACKAGE_NAME: "com.chess3d.mobile"
-        GRADLE_OPTS: "-Xmx3072m -XX:MaxPermSize=512m"
       node: v18
     triggering:
       events:
         - push
-        - pull_request
     scripts:
       - name: Install dependencies
         script: |
           npm install
-      - name: Install Capacitor CLI
-        script: |
-          npm install -g @capacitor/cli
       - name: Build web assets
         script: |
           npm run build
-      - name: Add Android platform
-        script: |
-          npx cap add android || true
       - name: Sync Capacitor
         script: |
           npx cap sync android
       - name: Build Android debug APK
         script: |
           cd android
-          ./gradlew clean
           ./gradlew assembleDebug
-          cd ..
     artifacts:
       - android/app/build/outputs/apk/debug/**/*.apk
-    publishing:
-      email:
-        recipients:
-          - $CODEMAGIC_EMAIL
-        notify:
-          success: true
-          failure: true
-
-  android-release:
-    name: Build Android Release APK
-    instance_type: linux
-    max_build_duration: 60
-    environment:
-      android_signing:
-        - keystore_reference
-      vars:
-        PACKAGE_NAME: "com.chess3d.mobile"
-        GRADLE_OPTS: "-Xmx3072m -XX:MaxPermSize=512m"
-      node: v18
-    triggering:
-      events:
-        - tag
-      tag:
-        patterns:
-          - pattern: 'v[0-9]+\.[0-9]+\.[0-9]+'
-            include: true
-    scripts:
-      - name: Install dependencies
-        script: |
-          npm install
-      - name: Install Capacitor CLI
-        script: |
-          npm install -g @capacitor/cli
-      - name: Build web assets
-        script: |
-          npm run build
-      - name: Add Android platform
-        script: |
-          npx cap add android || true
-      - name: Sync Capacitor
-        script: |
-          npx cap sync android
-      - name: Build Android release APK
-        script: |
-          cd android
-          ./gradlew clean
-          ./gradlew assembleRelease
-          cd ..
-    artifacts:
-      - android/app/build/outputs/apk/release/**/*.apk
-    publishing:
-      email:
-        recipients:
-          - $CODEMAGIC_EMAIL
-        notify:
-          success: true
-          failure: true
-
-  android-bundle:
-    name: Build Android App Bundle (AAB)
-    instance_type: linux
-    max_build_duration: 60
-    environment:
-      android_signing:
-        - keystore_reference
-      vars:
-        PACKAGE_NAME: "com.chess3d.mobile"
-        GRADLE_OPTS: "-Xmx3072m -XX:MaxPermSize=512m"
-      node: v18
-    triggering:
-      events:
-        - tag
-      tag:
-        patterns:
-          - pattern: 'release-[0-9]+\.[0-9]+\.[0-9]+'
-            include: true
-    scripts:
-      - name: Install dependencies
-        script: |
-          npm install
-      - name: Install Capacitor CLI
-        script: |
-          npm install -g @capacitor/cli
-      - name: Build web assets
-        script: |
-          npm run build
-      - name: Add Android platform
-        script: |
-          npx cap add android || true
-      - name: Sync Capacitor
-        script: |
-          npx cap sync android
-      - name: Build Android App Bundle
-        script: |
-          cd android
-          ./gradlew clean
-          ./gradlew bundleRelease
-          cd ..
-    artifacts:
-      - android/app/build/outputs/bundle/release/**/*.aab
-    publishing:
-      email:
-        recipients:
-          - $CODEMAGIC_EMAIL
-        notify:
-          success: true
-          failure: true
