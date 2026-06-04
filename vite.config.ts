@@ -1,14 +1,15 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  // 'root' is removed so it defaults to the project root
+  // Setting the root to 'src' tells Vite that index.html is located there
+  root: 'src',
   build: {
-    // Ensuring it outputs to the 'dist' folder
-    outDir: 'dist', 
-    sourcemap: false,
+    // This tells Vite where to output the build files (relative to the project root)
+    outDir: '../dist',
+    emptyOutDir: true,
     rollupOptions: {
-      // Explicitly pointing to where index.html is actually located
-      input: 'src/index.html', 
+      // With root set to 'src', the entry point is just 'index.html'
+      input: 'index.html',
     },
   },
   server: {
