@@ -1,36 +1,23 @@
 workflows:
   android-debug:
-    name: Build Android Debug APK
-    max_build_duration: 60
+    name: Android Debug Build
+    instance_type: mac_mini
     environment:
-      node: v18
-    triggering:
-      events:
-        - push
+      flutter: default
+      node: v20.x
     scripts:
-      - name: Check environment
-        script: |
-          cd $BITRISE_SOURCE_DIR
-          pwd
-          ls -la
-          node --version
-          npm --version
       - name: Install dependencies
         script: |
-          cd $BITRISE_SOURCE_DIR
           npm install
-      - name: Build web assets with Vite
+      - name: Build web assets
         script: |
-          cd $BITRISE_SOURCE_DIR
-          npx vite build
-          ls -la dist/
+          npm run build
       - name: Sync Capacitor
         script: |
-          cd $BITRISE_SOURCE_DIR
           npx cap sync android
       - name: Build Android debug APK
         script: |
-          cd $BITRISE_SOURCE_DIR/android
+          cd android
           ./gradlew assembleDebug
     artifacts:
-      - android/app/build/outputs/apk/debug/**/*.apk
+      - android/app/build/outputs/apk/debug/*.apk
