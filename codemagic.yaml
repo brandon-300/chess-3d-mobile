@@ -1,9 +1,8 @@
 workflows:
   android-debug:
     name: Android Debug Build
-    instance_type: mac_mini
+    # Removed instance_type to let Codemagic select the default allowed machine
     environment:
-      flutter: default
       node: v20.x
     scripts:
       - name: Install dependencies
