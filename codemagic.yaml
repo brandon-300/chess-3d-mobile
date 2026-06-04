@@ -1,9 +1,10 @@
 workflows:
   android-debug:
     name: Android Debug Build
-    # Removed instance_type to let Codemagic select the default allowed machine
+    # Removed node versioning to prevent installation errors
     environment:
-  node: 20  # Try changing from v20.x to 20 or 18
+      # If you specifically need a certain version, uncomment the next line
+      # node: 20 
     scripts:
       - name: Install dependencies
         script: |
