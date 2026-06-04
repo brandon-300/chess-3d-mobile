@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  root: 'src',
+  // root: 'src', // Remove or comment out this line
   build: {
     outDir: '../dist',
     sourcemap: false,
