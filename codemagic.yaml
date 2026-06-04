@@ -15,22 +15,14 @@ workflows:
           ls -la
           node --version
           npm --version
-      - name: Check package.json
-        script: |
-          cd $BITRISE_SOURCE_DIR
-          cat package.json
       - name: Install dependencies
         script: |
           cd $BITRISE_SOURCE_DIR
           npm ci --prefer-offline --no-audit
-      - name: Verify npm scripts
+      - name: Build web assets with Vite
         script: |
           cd $BITRISE_SOURCE_DIR
-          npm run
-      - name: Build web assets
-        script: |
-          cd $BITRISE_SOURCE_DIR
-          npm run build
+          npx vite build
           ls -la dist/
       - name: Sync Capacitor
         script: |
