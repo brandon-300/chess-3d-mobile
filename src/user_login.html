@@ -336,32 +336,16 @@
     </div>
   </div>
 
-  <!-- Module script – uses bundled Supabase + config + Capacitor deep‑linking -->
+  <!-- Module script – uses bundled Supabase + config -->
   <script type="module">
     import { createClient } from '@supabase/supabase-js';
     import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.ts';
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ---------- Capacitor deep‑link handler (Google OAuth) ----------
-    let isNative = false;
-
-    try {
-      const { Capacitor } = await import('@capacitor/core');
-      isNative = Capacitor.isNativePlatform();
-      if (isNative) {
-        const { App } = await import('@capacitor/app');
-        App.addListener('appUrlOpen', (data) => {
-          try {
-            const url = new URL(data.url);
-            if (url.hostname === 'oauth') {
-              // The session is already stored by Supabase – go to the main page
-              window.location.href = 'index.html';
-            }
-          } catch (_) { /* ignore malformed URLs */ }
-        });
-      }
-    } catch (_) { /* not native – ignore */ }
+    // isNative is set globally by main.js / capacitor-bridge.ts
+    // We read the flag that was set at app startup.
+    const isNative = !!window.isCapacitorNative;
 
     const $ = id => document.getElementById(id);
     const slider = $("slider");
