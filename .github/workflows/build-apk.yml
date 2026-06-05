@@ -34,7 +34,7 @@ jobs:
 
       # ── 5. Install npm dependencies ────────────────────────────────────────
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       # ── 6. Build web app (Vite → dist/) ───────────────────────────────────
       - name: Build web app
