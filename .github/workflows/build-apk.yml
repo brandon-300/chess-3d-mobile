@@ -40,12 +40,11 @@ jobs:
       - name: Build web app
         run: npm run build
         env:
-          # Pass secrets as env vars so Vite can pick them up if needed
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
 
       # ── 7. Add Android platform (generates the android/ folder) ───────────
-      # Manus did not commit the android/ native folder, so we generate it here
       - name: Add Capacitor Android platform
         run: npx cap add android
 
