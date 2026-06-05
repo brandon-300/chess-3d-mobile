@@ -55,7 +55,9 @@ jobs:
 
       # ── 7. Add Android platform (generates the android/ folder) ───────────
       - name: Add Capacitor Android platform
-        run: npx cap add android
+        run: |
+          rm -rf android/
+          npx cap add android
 
       # ── 8. Register deep-link scheme for OAuth ────────────────────────────
       - name: Add chess3d:// intent filter to Android manifest
