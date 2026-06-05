@@ -5,6 +5,11 @@ on:
     branches: [master]
   workflow_dispatch: # also triggerable manually from the Actions tab
 
+# Optional: Use Node.js 24 now to avoid deprecation warnings
+# (Remove this block if you prefer to ignore the warnings until September)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -55,14 +60,12 @@ jobs:
       # ── 8. Register deep-link scheme for OAuth ────────────────────────────
       - name: Add chess3d:// intent filter to Android manifest
         run: |
-          node -e "
-          const fs = require('fs');
-          let manifest = fs.readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
-          const intentFilter = '\n            <intent-filter android:autoVerify=\"true\">\n                <action android:name=\"android.intent.action.VIEW\" />\n                <category android:name=\"android.intent.category.DEFAULT\" />\n                <category android:name=\"android.intent.category.BROWSABLE\" />\n                <data android:scheme=\"chess3d\" android:host=\"oauth\" />\n            </intent-filter>';
-          // Insert the intent filter inside the first <activity> element
-          manifest = manifest.replace('</activity>', intentFilter + '\n        </activity>');
-          fs.writeFileSync('android/app/src/main/AndroidManifest.xml', manifest);
-          "
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          FILTER='            <intent-filter>\n                <action android:name="android.intent.action.VIEW" />\n                <category android:name="android.intent.category.DEFAULT" />\n                <category android:name="android.intent.category.BROWSABLE" />\n                <data android:scheme="chess3d" android:host="oauth" />\n            </intent-filter>'
+          # Insert before the closing </activity> tag
+          sed -i "s|</activity>|${FILTER}\n        </activity>|" "$MANIFEST"
+          echo "--- Manifest after patch ---"
+          cat "$MANIFEST"
 
       # ── 9. Copy custom app icons ──────────────────────────────────────────
       - name: Copy custom app icons
