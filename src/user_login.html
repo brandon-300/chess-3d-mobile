@@ -344,9 +344,12 @@
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ---------- Capacitor deep‑link handler (Google OAuth) ----------
+    let isNative = false;
+
     try {
       const { Capacitor } = await import('@capacitor/core');
-      if (Capacitor.isNativePlatform()) {
+      isNative = Capacitor.isNativePlatform();
+      if (isNative) {
         const { App } = await import('@capacitor/app');
         App.addListener('appUrlOpen', (data) => {
           try {
@@ -440,13 +443,12 @@
       }
     });
 
-    // Google OAuth – fixed for Capacitor deep‑linking
+    // Google OAuth – fixed redirect with chess3d:// scheme when native
     $("googleSubmit").addEventListener("click", async () => {
       const err = $("loginErr");
       err.classList.remove("show");
 
       // Use chess3d:// scheme on native, web URL on browser
-      const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform();
       const redirectUrl = isNative
         ? 'chess3d://oauth?onboarding=1'
         : window.location.origin + '/user_login.html?onboarding=1';
