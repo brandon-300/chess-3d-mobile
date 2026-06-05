@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Chess 3D</string>
+    <string name="title_activity_main">Chess 3D</string>
+    <string name="package_name">com.chess3d.mobile</string>
+    <string name="custom_url_scheme">com.chess3d.mobile</string>
+</resources>
