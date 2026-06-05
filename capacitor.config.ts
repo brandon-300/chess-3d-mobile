@@ -4,59 +4,39 @@ const config: CapacitorConfig = {
   appId: 'com.chess3d.mobile',
   appName: 'Chess 3D',
   webDir: 'dist',
-  
-  // Server configuration
+
+  // Use HTTPS scheme in WebView (required for OAuth, Supabase)
   server: {
     androidScheme: 'https',
-    cleartext: true,
-    // Uncomment for local development
-    // url: 'http://192.168.1.100:3000',
-    // cleartext: true,
   },
 
-  // Plugin configurations
   plugins: {
-    // Push Notifications
-    PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert'],
-    },
-
-    // Status Bar
+    // Immersive status bar matching the chess app aesthetic
     StatusBar: {
       style: 'dark',
       backgroundColor: '#0a0806',
       overlaysWebView: true,
     },
 
-    // Keyboard
-    Keyboard: {
-      resize: 'none',
-      resizeOnFullScreen: true,
-    },
-
-    // Screen Orientation
+    // Screen orientation — locked to landscape during gameplay
     ScreenOrientation: {
-      // Controlled programmatically
+      // Controlled programmatically by the app
     },
   },
 
-  // iOS-specific configuration
+  // Custom URL scheme for Google OAuth deep-linking
   ios: {
     scheme: 'chess3d',
-    // Enable hardware acceleration for WebGL
-    webViewConfiguration: {
-      allowsInlineMediaPlayback: true,
-      mediaTypesRequiringUserActionForPlayback: [],
-    },
   },
 
-  // Android-specific configuration
   android: {
     scheme: 'chess3d',
-    // Enable hardware acceleration
+    // Enable hardware acceleration for Three.js WebGL rendering
     webViewConfiguration: {
       hardwareAccelerated: true,
     },
+    // Allow the WebView to handle the chess3d:// scheme
+    allowMixedContent: false,
   },
 };
 
