@@ -305,7 +305,14 @@
     import { createClient } from '@supabase/supabase-js';
     import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.ts';
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // PKCE flow enabled + Capacitor-specific settings
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        flowType: 'pkce',
+        detectSessionInUrl: false,
+        storage: window.localStorage,
+      },
+    });
 
     // Reads the sessionStorage flag set synchronously by main.js (Bug 1 fixed)
     const isNative = sessionStorage.getItem('isCapacitorNative') === '1';
@@ -387,7 +394,6 @@
     });
 
     // ── Google Sign‑In (native – in‑app browser + deep link capture) ─────────
-    // Bugs 2 & 4 fixed: full URL passed, listener removed individually
     let googleAuthInProgress = false;
     let appUrlHandle = null;
 
@@ -420,7 +426,7 @@
             const urlObj = new URL(data.url);
             if (urlObj.hostname !== 'oauth') return;
 
-            // Bug 2 fix: pass the FULL URL, not just the code
+            // Pass full URL (PKCE verifier is matched automatically)
             const { error } = await supabase.auth.exchangeCodeForSession(data.url);
             if (error) throw error;
 
@@ -434,7 +440,7 @@
             if (!session) throw new Error('Session not created after exchange.');
 
             sessionStorage.removeItem('pendingGoogleAuth');
-            if (appUrlHandle) appUrlHandle.remove();   // Bug 4: remove only this listener
+            if (appUrlHandle) appUrlHandle.remove();
 
             window.location.href = 'index.html';
           } catch (e) {
