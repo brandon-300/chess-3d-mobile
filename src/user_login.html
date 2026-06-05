@@ -343,9 +343,8 @@
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // isNative is set globally by main.js / capacitor-bridge.ts
-    // We read the flag that was set at app startup.
-    const isNative = !!window.isCapacitorNative;
+    // Read from sessionStorage — survives page navigations inside the WebView
+    const isNative = sessionStorage.getItem('isCapacitorNative') === '1';
 
     const $ = id => document.getElementById(id);
     const slider = $("slider");
