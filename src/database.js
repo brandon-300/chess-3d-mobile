@@ -7,6 +7,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config';
 let sb = null;
 let sbStatus = 'Loading...';
 
+export { sb };
+
 try {
   sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   sbStatus = 'Loaded';
