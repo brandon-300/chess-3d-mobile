@@ -34,12 +34,15 @@ async function initCapacitorIfNative() {
     try {
         const { Capacitor } = await import('@capacitor/core');
         if (Capacitor.isNativePlatform()) {
+            window.isCapacitorNative = true;   // ← makes isNative available everywhere
             const { initializeCapacitorBridge } = await import('./capacitor-bridge.ts');
             await initializeCapacitorBridge();
             console.log('Capacitor bridge initialized');
+        } else {
+            window.isCapacitorNative = false;
         }
     } catch (e) {
-        // Not running in Capacitor, or bridge file missing – safe to ignore
+        window.isCapacitorNative = false;
     }
 }
 
