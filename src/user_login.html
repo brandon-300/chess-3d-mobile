@@ -305,16 +305,8 @@
     import { createClient } from '@supabase/supabase-js';
     import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.ts';
 
-    // PKCE flow enabled + Capacitor-specific settings
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        flowType: 'pkce',
-        detectSessionInUrl: false,
-        storage: window.localStorage,
-      },
-    });
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Reads the sessionStorage flag set synchronously by main.js (Bug 1 fixed)
     const isNative = sessionStorage.getItem('isCapacitorNative') === '1';
     document.getElementById('native-badge').textContent =
       `native: ${isNative} | host: ${window.location.hostname}`;
@@ -393,93 +385,54 @@
       }
     });
 
-    // ── Google Sign‑In (native – in‑app browser + deep link capture) ─────────
-    let googleAuthInProgress = false;
-    let appUrlHandle = null;
+    // ── Native Google Sign‑In (uses capacitor-google-auth plugin) ────────────
+    let googleSignInInProgress = false;
 
     $("googleSubmit").addEventListener("click", async () => {
-      if (googleAuthInProgress) return;
-      googleAuthInProgress = true;
+      if (googleSignInInProgress) return;
+      googleSignInInProgress = true;
       const errEl = $("loginErr");
       errEl.classList.remove("show");
 
       try {
+        // If not native, fall back to redirect
         if (!isNative) {
           const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: { redirectTo: window.location.origin + '/user_login.html?onboarding=1' },
           });
           if (error) throw error;
-          googleAuthInProgress = false;
+          googleSignInInProgress = false;
           return;
         }
 
-        sessionStorage.setItem('pendingGoogleAuth', '1');
+        // Dynamically import the plugin (only works on device)
+        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
 
-        const [{ Browser }, { App }] = await Promise.all([
-          import('@capacitor/browser'),
-          import('@capacitor/app')
-        ]);
+        // Show the native account picker
+        const result = await GoogleAuth.signIn();
 
-        appUrlHandle = await App.addListener('appUrlOpen', async (data) => {
-          try {
-            const urlObj = new URL(data.url);
-            if (urlObj.hostname !== 'oauth') return;
+        if (!result || !result.authentication.idToken) {
+          throw new Error('Google sign‑in was cancelled or failed.');
+        }
 
-            // Pass full URL (PKCE verifier is matched automatically)
-            const { error } = await supabase.auth.exchangeCodeForSession(data.url);
-            if (error) throw error;
-
-            let session = null;
-            for (let i = 0; i < 10; i++) {
-              const { data: { session: s } } = await supabase.auth.getSession();
-              if (s) { session = s; break; }
-              await new Promise(r => setTimeout(r, 500));
-            }
-
-            if (!session) throw new Error('Session not created after exchange.');
-
-            sessionStorage.removeItem('pendingGoogleAuth');
-            if (appUrlHandle) appUrlHandle.remove();
-
-            window.location.href = 'index.html';
-          } catch (e) {
-            errEl.textContent = e.message || 'Session exchange failed.';
-            errEl.classList.add('show');
-            sessionStorage.removeItem('pendingGoogleAuth');
-            if (appUrlHandle) appUrlHandle.remove();
-          } finally {
-            googleAuthInProgress = false;
-          }
-        });
-
-        const { data: { url } } = await supabase.auth.signInWithOAuth({
+        // Exchange the Google ID token for a Supabase session
+        const { data, error } = await supabase.auth.signInWithIdToken({
           provider: 'google',
-          options: {
-            redirectTo: 'chess3d://oauth',
-            skipBrowserRedirect: true,
-          },
+          token: result.authentication.idToken,
         });
 
-        if (!url) throw new Error('Could not get OAuth URL');
-        await Browser.open({ url });
+        if (error) throw error;
+        if (!data?.user) throw new Error('No user returned from Supabase');
 
-        setTimeout(() => {
-          if (googleAuthInProgress) {
-            googleAuthInProgress = false;
-            errEl.textContent = 'Sign-in timed out. Please try again.';
-            errEl.classList.add('show');
-            sessionStorage.removeItem('pendingGoogleAuth');
-            if (appUrlHandle) appUrlHandle.remove();
-          }
-        }, 120000);
-
+        // Redirect to main page
+        window.location.href = 'index.html';
       } catch (e) {
+        console.error('[GoogleSignIn]', e);
         errEl.textContent = e.message || 'Google authentication failed.';
         errEl.classList.add('show');
-        googleAuthInProgress = false;
-        sessionStorage.removeItem('pendingGoogleAuth');
-        if (appUrlHandle) appUrlHandle.remove();
+      } finally {
+        googleSignInInProgress = false;
       }
     });
 
