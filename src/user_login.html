@@ -336,12 +336,29 @@
     </div>
   </div>
 
-  <!-- Module script — uses bundled Supabase + config -->
+  <!-- Module script – uses bundled Supabase + config + Capacitor deep‑linking -->
   <script type="module">
     import { createClient } from '@supabase/supabase-js';
     import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.ts';
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ---------- Capacitor deep‑link handler (Google OAuth) ----------
+    try {
+      const { Capacitor } = await import('@capacitor/core');
+      if (Capacitor.isNativePlatform()) {
+        const { App } = await import('@capacitor/app');
+        App.addListener('appUrlOpen', (data) => {
+          try {
+            const url = new URL(data.url);
+            if (url.hostname === 'oauth') {
+              // The session is already stored by Supabase – go to the main page
+              window.location.href = 'index.html';
+            }
+          } catch (_) { /* ignore malformed URLs */ }
+        });
+      }
+    } catch (_) { /* not native – ignore */ }
 
     const $ = id => document.getElementById(id);
     const slider = $("slider");
@@ -399,7 +416,7 @@
     }
     function isValidPassword(pw) { return pw.length >= 8 && /[a-zA-Z]/.test(pw) && /[0-9]/.test(pw) && /[^a-zA-Z0-9]/.test(pw); }
 
-    // Login (unchanged)
+    // Login
     $("loginSubmit").addEventListener("click", async function() {
       const btn = this;
       const username = $("loginUsername").value.trim(), password = $("loginPassword").value, err = $("loginErr");
@@ -423,24 +440,30 @@
       }
     });
 
-    // Google OAuth Login Trigger – redirects back to this page with ?onboarding=1
+    // Google OAuth – fixed for Capacitor deep‑linking
     $("googleSubmit").addEventListener("click", async () => {
       const err = $("loginErr");
       err.classList.remove("show");
+
+      // Use chess3d:// scheme on native, web URL on browser
+      const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform();
+      const redirectUrl = isNative
+        ? 'chess3d://oauth?onboarding=1'
+        : window.location.origin + '/user_login.html?onboarding=1';
+
       try {
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
-          options: {
-            redirectTo: window.location.origin + "/user_login.html?onboarding=1",
-          },
+          options: { redirectTo: redirectUrl },
         });
         if (error) throw error;
       } catch(e) {
-        err.textContent = e.message || "Google authentication failed."; err.classList.add("show");
+        err.textContent = e.message || 'Google authentication failed.';
+        err.classList.add('show');
       }
     });
 
-    // Signup (unchanged)
+    // Signup
     $("signupSubmit").addEventListener("click", async () => {
       const fn = $("signupFirstName").value.trim(), ln = $("signupLastName").value.trim();
       const country = $("signupCountry").value.trim(), username = $("signupUsername").value.trim();
