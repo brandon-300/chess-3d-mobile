@@ -36,7 +36,12 @@ export default defineConfig({
   },
 
   optimizeDeps: {
-    include: ['three', '@supabase/supabase-js'],
+    include: [
+      'three',
+      '@supabase/supabase-js',
+      '@capacitor/core',
+      '@capacitor/app',
+    ],
   },
 
   define: {
