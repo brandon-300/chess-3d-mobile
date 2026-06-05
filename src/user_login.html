@@ -395,7 +395,7 @@
       }
     });
 
-    // ── Google Sign‑In via in‑app browser tab (reliable, no deep link needed) ─
+    // ── Google Sign‑In via in‑app browser tab ────────────────────────────────
     let googleAuthInProgress = false;
 
     $("googleSubmit").addEventListener("click", async () => {
@@ -419,46 +419,30 @@
         // Native: use Capacitor Browser to open the OAuth URL
         const { Browser } = await import('@capacitor/browser');
 
-        // Build the Supabase OAuth URL manually
+        // Listen for auth state changes – once we have a session, redirect to index
+        supabase.auth.onAuthStateChange((event, session) => {
+          if (session && googleAuthInProgress) {
+            googleAuthInProgress = false;
+            window.location.href = 'index.html';
+          }
+        });
+
+        // Get the OAuth URL (Supabase handles PKCE automatically)
         const { data: { url } } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: 'chess3d://oauth',  // still needed, but browser will intercept before redirect
-            skipBrowserRedirect: true,      // don't open system browser
+            redirectTo: 'chess3d://oauth',  // deep‑link back to app
+            skipBrowserRedirect: true,      // we open the URL ourselves
           },
         });
 
         if (!url) throw new Error('Could not get OAuth URL');
 
-        // Open the URL in an in-app browser tab
+        // Open the URL in an in‑app browser tab
         await Browser.open({ url });
 
         // The browser will close when the redirect to chess3d:// is detected.
-        // We listen for the close event and then get the session.
-        Browser.addListener('browserFinished', async () => {
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-              window.location.href = 'index.html';
-            } else {
-              throw new Error('No session found after Google sign-in.');
-            }
-          } catch (e) {
-            errEl.textContent = e.message || 'Failed to complete sign-in.';
-            errEl.classList.add('show');
-          } finally {
-            googleAuthInProgress = false;
-          }
-        });
-
-        // In case the browser doesn't close on its own (fallback timeout)
-        setTimeout(() => {
-          if (googleAuthInProgress) {
-            googleAuthInProgress = false;
-            errEl.textContent = 'Sign-in timed out. Please try again.';
-            errEl.classList.add('show');
-          }
-        }, 120000);
+        // The auth state change listener above will handle the rest.
 
       } catch (e) {
         errEl.textContent = e.message || 'Google authentication failed.';
