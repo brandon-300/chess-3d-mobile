@@ -1,5 +1,16 @@
 // main.js — Orchestrator for Chess 3D (adapted for Capacitor + Vite)
 
+// ═══ MUST run synchronously before any other logic (Bug 1 fix) ═══
+import { Capacitor } from '@capacitor/core';
+
+if (Capacitor.isNativePlatform()) {
+  sessionStorage.setItem('isCapacitorNative', '1');
+  window.isCapacitorNative = true;
+} else {
+  sessionStorage.setItem('isCapacitorNative', '0');
+  window.isCapacitorNative = false;
+}
+
 import * as db from './database.js';
 import * as engine from './game_engine.js';
 import * as ui from './ui_handler.js';
@@ -29,30 +40,18 @@ let moveSyncing = false,
     waitingPollInterval = null,
     lastTimerSync = 0;
 
-// ---------- Capacitor Native Bridge (lazy) ----------
-async function initCapacitorIfNative() {
-    try {
-        const { Capacitor } = await import('@capacitor/core');
-        if (Capacitor.isNativePlatform()) {
-            window.isCapacitorNative = true;
-            sessionStorage.setItem('isCapacitorNative', '1');   // ← persists across pages
+// ---------- Main Initialization ----------
+async function init() {
+    // Capacitor bridge initialization (flag already set at module level)
+    if (window.isCapacitorNative) {
+        try {
             const { initializeCapacitorBridge } = await import('./capacitor-bridge.ts');
             await initializeCapacitorBridge();
             console.log('Capacitor bridge initialized');
-        } else {
-            window.isCapacitorNative = false;
-            sessionStorage.setItem('isCapacitorNative', '0');
+        } catch (e) {
+            console.error('Failed to initialize Capacitor bridge:', e);
         }
-    } catch (e) {
-        window.isCapacitorNative = false;
-        sessionStorage.setItem('isCapacitorNative', '0');
     }
-}
-
-// ---------- Main Initialization ----------
-async function init() {
-    // Set up native features before anything else
-    await initCapacitorIfNative();
 
     try {
         currentUserId = await db.initAuth();
