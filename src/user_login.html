@@ -307,6 +307,7 @@
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // Reads the sessionStorage flag set synchronously by main.js (Bug 1 fixed)
     const isNative = sessionStorage.getItem('isCapacitorNative') === '1';
     document.getElementById('native-badge').textContent =
       `native: ${isNative} | host: ${window.location.hostname}`;
@@ -386,7 +387,9 @@
     });
 
     // ── Google Sign‑In (native – in‑app browser + deep link capture) ─────────
+    // Bugs 2 & 4 fixed: full URL passed, listener removed individually
     let googleAuthInProgress = false;
+    let appUrlHandle = null;
 
     $("googleSubmit").addEventListener("click", async () => {
       if (googleAuthInProgress) return;
@@ -405,7 +408,6 @@
           return;
         }
 
-        // Tell capacitor-bridge to ignore the OAuth callback
         sessionStorage.setItem('pendingGoogleAuth', '1');
 
         const [{ Browser }, { App }] = await Promise.all([
@@ -413,18 +415,15 @@
           import('@capacitor/app')
         ]);
 
-        const appUrlHandler = async (data) => {
+        appUrlHandle = await App.addListener('appUrlOpen', async (data) => {
           try {
             const urlObj = new URL(data.url);
             if (urlObj.hostname !== 'oauth') return;
-            const code = urlObj.searchParams.get('code');
-            if (!code) return;
 
-            // Exchange the code for a session
-            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            // Bug 2 fix: pass the FULL URL, not just the code
+            const { error } = await supabase.auth.exchangeCodeForSession(data.url);
             if (error) throw error;
 
-            // Wait for the session to be fully persisted
             let session = null;
             for (let i = 0; i < 10; i++) {
               const { data: { session: s } } = await supabase.auth.getSession();
@@ -434,22 +433,19 @@
 
             if (!session) throw new Error('Session not created after exchange.');
 
-            // Clean up
             sessionStorage.removeItem('pendingGoogleAuth');
-            App.removeAllListeners('appUrlOpen');
+            if (appUrlHandle) appUrlHandle.remove();   // Bug 4: remove only this listener
 
             window.location.href = 'index.html';
           } catch (e) {
             errEl.textContent = e.message || 'Session exchange failed.';
             errEl.classList.add('show');
             sessionStorage.removeItem('pendingGoogleAuth');
-            App.removeAllListeners('appUrlOpen');
+            if (appUrlHandle) appUrlHandle.remove();
           } finally {
             googleAuthInProgress = false;
           }
-        };
-
-        App.addListener('appUrlOpen', appUrlHandler);
+        });
 
         const { data: { url } } = await supabase.auth.signInWithOAuth({
           provider: 'google',
@@ -462,14 +458,13 @@
         if (!url) throw new Error('Could not get OAuth URL');
         await Browser.open({ url });
 
-        // Fallback timeout
         setTimeout(() => {
           if (googleAuthInProgress) {
             googleAuthInProgress = false;
             errEl.textContent = 'Sign-in timed out. Please try again.';
             errEl.classList.add('show');
             sessionStorage.removeItem('pendingGoogleAuth');
-            App.removeAllListeners('appUrlOpen');
+            if (appUrlHandle) appUrlHandle.remove();
           }
         }, 120000);
 
@@ -478,6 +473,7 @@
         errEl.classList.add('show');
         googleAuthInProgress = false;
         sessionStorage.removeItem('pendingGoogleAuth');
+        if (appUrlHandle) appUrlHandle.remove();
       }
     });
 
