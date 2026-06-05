@@ -34,15 +34,18 @@ async function initCapacitorIfNative() {
     try {
         const { Capacitor } = await import('@capacitor/core');
         if (Capacitor.isNativePlatform()) {
-            window.isCapacitorNative = true;   // ← makes isNative available everywhere
+            window.isCapacitorNative = true;
+            sessionStorage.setItem('isCapacitorNative', '1');   // ← persists across pages
             const { initializeCapacitorBridge } = await import('./capacitor-bridge.ts');
             await initializeCapacitorBridge();
             console.log('Capacitor bridge initialized');
         } else {
             window.isCapacitorNative = false;
+            sessionStorage.setItem('isCapacitorNative', '0');
         }
     } catch (e) {
         window.isCapacitorNative = false;
+        sessionStorage.setItem('isCapacitorNative', '0');
     }
 }
 
