@@ -55,13 +55,14 @@ jobs:
       # ── 8. Register deep-link scheme for OAuth ────────────────────────────
       - name: Add chess3d:// intent filter to Android manifest
         run: |
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          sed -i '/<activity/i\            <intent-filter android:autoVerify="true">\
-                              <action android:name="android.intent.action.VIEW" />\
-                              <category android:name="android.intent.category.DEFAULT" />\
-                              <category android:name="android.intent.category.BROWSABLE" />\
-                              <data android:scheme="chess3d" android:host="oauth" />\
-                          </intent-filter>' "$MANIFEST"
+          node -e "
+          const fs = require('fs');
+          let manifest = fs.readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
+          const intentFilter = '\n            <intent-filter android:autoVerify=\"true\">\n                <action android:name=\"android.intent.action.VIEW\" />\n                <category android:name=\"android.intent.category.DEFAULT\" />\n                <category android:name=\"android.intent.category.BROWSABLE\" />\n                <data android:scheme=\"chess3d\" android:host=\"oauth\" />\n            </intent-filter>';
+          // Insert the intent filter inside the first <activity> element
+          manifest = manifest.replace('</activity>', intentFilter + '\n        </activity>');
+          fs.writeFileSync('android/app/src/main/AndroidManifest.xml', manifest);
+          "
 
       # ── 9. Copy custom app icons ──────────────────────────────────────────
       - name: Copy custom app icons
