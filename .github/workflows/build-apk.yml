@@ -32,6 +32,10 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+# ── 4.5 Remove outdated lockfile ──────────────────────────────────────
+      - name: Remove old lockfile
+        run: rm -f package-lock.json
+
       # ── 5. Install npm dependencies ────────────────────────────────────────
       - name: Install dependencies
         run: npm install
