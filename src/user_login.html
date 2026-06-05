@@ -6,6 +6,7 @@
 <title>Chess 3D · Login</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;1,300&display=swap" rel="stylesheet">
 <style>
+  /* (keep the same CSS as before – all icons are inline SVGs) */
   :root{
     --bg:#0a0806; --card:rgba(20,14,8,.95); --panel:rgba(16,10,6,.98);
     --accent:#c9a84c; --accent2:#7a6230;
@@ -305,7 +306,12 @@
     import { createClient } from '@supabase/supabase-js';
     import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.ts';
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        flowType: 'pkce',
+        detectSessionInUrl: false,
+      },
+    });
 
     const isNative = sessionStorage.getItem('isCapacitorNative') === '1';
     document.getElementById('native-badge').textContent =
@@ -385,7 +391,7 @@
       }
     });
 
-    // ── Native Google Sign‑In (uses capacitor-google-auth plugin) ────────────
+    // ── Google Sign‑In: Browser + browserPageLoaded callback capture ─────────
     let googleSignInInProgress = false;
 
     $("googleSubmit").addEventListener("click", async () => {
@@ -395,7 +401,6 @@
       errEl.classList.remove("show");
 
       try {
-        // If not native, fall back to redirect
         if (!isNative) {
           const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
@@ -406,32 +411,62 @@
           return;
         }
 
-        // Dynamically import the plugin (only works on device)
-        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+        const { Browser } = await import('@capacitor/browser');
 
-        // Show the native account picker
-        const result = await GoogleAuth.signIn();
+        // Listen for the callback URL before the system can open it
+        Browser.addListener('browserPageLoaded', async (info) => {
+          if (!info.url) return;
+          // Detect if the URL is the OAuth callback (chess3d://oauth?...)
+          if (info.url.startsWith('chess3d://oauth')) {
+            try {
+              // Exchange the full callback URL (code + state) for a session
+              const { error } = await supabase.auth.exchangeCodeForSession(info.url);
+              if (error) throw error;
 
-        if (!result || !result.authentication.idToken) {
-          throw new Error('Google sign‑in was cancelled or failed.');
-        }
+              // Session should now be stored; confirm it
+              const { data: { session } } = await supabase.auth.getSession();
+              if (!session) throw new Error('Session not created after exchange.');
 
-        // Exchange the Google ID token for a Supabase session
-        const { data, error } = await supabase.auth.signInWithIdToken({
-          provider: 'google',
-          token: result.authentication.idToken,
+              // Close the browser
+              await Browser.close();
+
+              // Redirect to main page
+              window.location.href = 'index.html';
+            } catch (e) {
+              errEl.textContent = e.message || 'Session exchange failed.';
+              errEl.classList.add('show');
+              await Browser.close();
+            } finally {
+              googleSignInInProgress = false;
+            }
+          }
         });
 
-        if (error) throw error;
-        if (!data?.user) throw new Error('No user returned from Supabase');
+        // Start the OAuth flow
+        const { data: { url } } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: 'chess3d://oauth',
+            skipBrowserRedirect: true,
+          },
+        });
 
-        // Redirect to main page
-        window.location.href = 'index.html';
+        if (!url) throw new Error('Could not get OAuth URL');
+        await Browser.open({ url });
+
+        // Fallback timeout
+        setTimeout(() => {
+          if (googleSignInInProgress) {
+            googleSignInInProgress = false;
+            errEl.textContent = 'Sign-in timed out. Please try again.';
+            errEl.classList.add('show');
+            Browser.close();
+          }
+        }, 120000);
+
       } catch (e) {
-        console.error('[GoogleSignIn]', e);
         errEl.textContent = e.message || 'Google authentication failed.';
         errEl.classList.add('show');
-      } finally {
         googleSignInInProgress = false;
       }
     });
