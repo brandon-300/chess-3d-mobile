@@ -6,7 +6,6 @@ on:
   workflow_dispatch: # also triggerable manually from the Actions tab
 
 # Optional: Use Node.js 24 now to avoid deprecation warnings
-# (Remove this block if you prefer to ignore the warnings until September)
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -57,14 +56,13 @@ jobs:
       - name: Add Capacitor Android platform
         run: |
           rm -rf android/
-          npx cap add android
+          npx cap add android 2>/dev/null || npx cap sync android
 
       # ── 8. Register deep-link scheme for OAuth ────────────────────────────
       - name: Add chess3d:// intent filter to Android manifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           FILTER='            <intent-filter>\n                <action android:name="android.intent.action.VIEW" />\n                <category android:name="android.intent.category.DEFAULT" />\n                <category android:name="android.intent.category.BROWSABLE" />\n                <data android:scheme="chess3d" android:host="oauth" />\n            </intent-filter>'
-          # Insert before the closing </activity> tag
           sed -i "s|</activity>|${FILTER}\n        </activity>|" "$MANIFEST"
           echo "--- Manifest after patch ---"
           cat "$MANIFEST"
