@@ -39,3 +39,4 @@ logs/
 .parcel-cache
 .turbo/
 coverage/
+android/
