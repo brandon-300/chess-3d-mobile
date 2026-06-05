@@ -52,41 +52,49 @@ jobs:
       - name: Add Capacitor Android platform
         run: npx cap add android
 
-      # ── 8. Copy custom app icons ──────────────────────────────────────────
+      # ── 8. Register deep-link scheme for OAuth ────────────────────────────
+      - name: Add chess3d:// intent filter to Android manifest
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          sed -i '/<activity/i\            <intent-filter android:autoVerify="true">\
+                              <action android:name="android.intent.action.VIEW" />\
+                              <category android:name="android.intent.category.DEFAULT" />\
+                              <category android:name="android.intent.category.BROWSABLE" />\
+                              <data android:scheme="chess3d" android:host="oauth" />\
+                          </intent-filter>' "$MANIFEST"
+
+      # ── 9. Copy custom app icons ──────────────────────────────────────────
       - name: Copy custom app icons
         run: |
-          # Standard launcher icons
           cp assets/android-icons/mipmap-mdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
           cp assets/android-icons/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
           cp assets/android-icons/mipmap-xhdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
           cp assets/android-icons/mipmap-xxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
           cp assets/android-icons/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
-          # Round icons (some launchers require these)
           cp assets/android-icons/mipmap-mdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
           cp assets/android-icons/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
           cp assets/android-icons/mipmap-xhdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
           cp assets/android-icons/mipmap-xxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
           cp assets/android-icons/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
 
-          # Remove adaptive icon XML (forces the system to use the PNGs)
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
 
-      # ── 9. Sync web assets into Android project ────────────────────────────
+      # ── 10. Sync web assets into Android project ────────────────────────────
       - name: Capacitor sync
         run: npx cap sync android
 
-      # ── 10. Make Gradle wrapper executable ─────────────────────────────────
+      # ── 11. Make Gradle wrapper executable ─────────────────────────────────
       - name: Grant gradlew permission
         run: chmod +x android/gradlew
 
-      # ── 11. Build debug APK ────────────────────────────────────────────────
+      # ── 12. Build debug APK ────────────────────────────────────────────────
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      # ── 12. Upload APK as downloadable artifact ────────────────────────────
+      # ── 13. Upload APK as downloadable artifact ────────────────────────────
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
