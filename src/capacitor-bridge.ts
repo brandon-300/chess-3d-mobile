@@ -8,21 +8,16 @@ import { App } from '@capacitor/app';
 
 let bridgeInitialized = false;
 
-/**
- * Initialize native features on app startup.
- * Safe to call on web — exits early if not on a native platform.
- */
 export async function initializeCapacitorBridge(): Promise<void> {
   if (bridgeInitialized) return;
 
   try {
-    // Only proceed if running on a real device
     if (!Capacitor.isNativePlatform()) {
       console.log('Not running on native platform — skipping Capacitor bridge');
       return;
     }
 
-    // 1. Configure status bar — dark overlay matching chess aesthetic
+    // 1. Configure status bar
     await StatusBar.setBackgroundColor({ color: '#0a0806' });
     await StatusBar.setStyle({ style: Style.Dark });
     await StatusBar.setOverlaysWebView({ overlay: true });
@@ -30,7 +25,13 @@ export async function initializeCapacitorBridge(): Promise<void> {
 
     // 2. Listen for deep-link OAuth callbacks
     App.addListener('appUrlOpen', (data: { url: string }) => {
-      handleDeepLink(data.url);
+      try {
+        const urlObj = new URL(data.url);
+        if (urlObj.hostname === 'oauth') {
+          // OAuth callback — redirect to main page (session already stored)
+          window.location.href = 'index.html';
+        }
+      } catch (_) { /* ignore malformed URLs */ }
     });
     console.log('Deep-link listener registered');
 
@@ -41,9 +42,6 @@ export async function initializeCapacitorBridge(): Promise<void> {
   }
 }
 
-/**
- * Lock screen to landscape orientation (for gameplay).
- */
 export async function lockGameplayOrientation(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   try {
@@ -54,9 +52,6 @@ export async function lockGameplayOrientation(): Promise<void> {
   }
 }
 
-/**
- * Unlock screen orientation (for menus).
- */
 export async function unlockMenuOrientation(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   try {
@@ -65,47 +60,4 @@ export async function unlockMenuOrientation(): Promise<void> {
   } catch (error) {
     console.error('Failed to unlock orientation:', error);
   }
-}
-
-/**
- * Handle deep-link OAuth callback from chess3d:// scheme.
- * Parses the authorization code and exchanges it with Supabase.
- */
-function handleDeepLink(url: string): void {
-  try {
-    const urlObj = new URL(url);
-
-    // Only handle OAuth callbacks
-    if (urlObj.pathname !== '/oauth' && !urlObj.searchParams.has('code')) {
-      return;
-    }
-
-    const code = urlObj.searchParams.get('code');
-    if (!code) {
-      console.error('Deep link missing authorization code');
-      return;
-    }
-
-    // Dispatch a custom event so the main app can handle the exchange
-    // This decouples the bridge from Supabase logic
-    window.dispatchEvent(
-      new CustomEvent('oauth:callback', {
-        detail: { code, url },
-      })
-    );
-
-    console.log('OAuth deep-link processed');
-  } catch (error) {
-    console.error('Failed to handle deep link:', error);
-  }
-}
-
-/**
- * Listen for OAuth callback events (call from main.js init).
- * When triggered, the main app exchanges the code for a Supabase session.
- */
-export function onOAuthCallback(handler: (code: string) => void): void {
-  window.addEventListener('oauth:callback', ((e: CustomEvent) => {
-    handler(e.detail.code);
-  }) as EventListener);
 }
