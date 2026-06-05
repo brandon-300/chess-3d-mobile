@@ -28,7 +28,14 @@ export async function initializeCapacitorBridge(): Promise<void> {
       try {
         const urlObj = new URL(data.url);
         if (urlObj.hostname === 'oauth') {
-          // OAuth callback — redirect to main page (session already stored)
+          // If the login page is expecting the callback, let it handle the exchange.
+          // Otherwise, just navigate to index.html (session should already be stored).
+          const pending = sessionStorage.getItem('pendingGoogleAuth');
+          if (pending === '1') {
+            console.log('OAuth callback received while login page is active – ignoring in bridge');
+            return;
+          }
+          // Fallback: navigate to main page
           window.location.href = 'index.html';
         }
       } catch (_) { /* ignore malformed URLs */ }
