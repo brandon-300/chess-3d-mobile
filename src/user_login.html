@@ -315,7 +315,6 @@
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ── Native detection ───────────────────────────────────────────────────
-    // sessionStorage flag is set by main.js on app startup.
     const isNative = sessionStorage.getItem('isCapacitorNative') === '1';
     document.getElementById('native-badge').textContent =
       `native: ${isNative} | host: ${window.location.hostname}`;
@@ -398,7 +397,7 @@
       }
     });
 
-    // Google OAuth – redirect via Chrome
+    // Google OAuth – redirect via Chrome (with diagnostic alert)
     $("googleSubmit").addEventListener("click", async () => {
       const err = $("loginErr");
       err.classList.remove("show");
@@ -406,6 +405,9 @@
       const redirectUrl = isNative
         ? 'chess3d://oauth?onboarding=1'
         : window.location.origin + '/user_login.html?onboarding=1';
+
+      // 👇 TEMP: show exactly what will be sent to Google
+      alert('Redirect URL:\n' + redirectUrl);
 
       console.log('[GoogleOAuth] isNative:', isNative, '| redirectUrl:', redirectUrl);
 
