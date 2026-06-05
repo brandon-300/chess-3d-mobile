@@ -32,7 +32,7 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-# ── 4.5 Remove outdated lockfile ──────────────────────────────────────
+      # ── 4.5 Remove outdated lockfile ──────────────────────────────────────
       - name: Remove old lockfile
         run: rm -f package-lock.json
 
@@ -52,20 +52,29 @@ jobs:
       - name: Add Capacitor Android platform
         run: npx cap add android
 
-      # ── 8. Sync web assets into Android project ────────────────────────────
+      # ── 8. Copy custom app icons ──────────────────────────────────────────
+      - name: Copy custom app icons
+        run: |
+          cp assets/android-icons/mipmap-mdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp assets/android-icons/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp assets/android-icons/mipmap-xhdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp assets/android-icons/mipmap-xxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp assets/android-icons/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+      # ── 9. Sync web assets into Android project ────────────────────────────
       - name: Capacitor sync
         run: npx cap sync android
 
-      # ── 9. Make Gradle wrapper executable ─────────────────────────────────
+      # ── 10. Make Gradle wrapper executable ─────────────────────────────────
       - name: Grant gradlew permission
         run: chmod +x android/gradlew
 
-      # ── 10. Build debug APK ────────────────────────────────────────────────
+      # ── 11. Build debug APK ────────────────────────────────────────────────
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      # ── 11. Upload APK as downloadable artifact ────────────────────────────
+      # ── 12. Upload APK as downloadable artifact ────────────────────────────
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
