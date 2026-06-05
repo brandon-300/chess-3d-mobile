@@ -195,7 +195,7 @@
           <div class="err-msg" id="loginErr"></div>
           <button class="submit-btn" id="loginSubmit">Log in</button>
 
-          <!-- Google Sign‑in (via in‑app browser – no deep link needed) -->
+          <!-- Google Sign‑in (via in‑app browser) -->
           <div class="google-divider"><span>OR</span></div>
           <button type="button" class="google-btn" id="googleSubmit">
             <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
@@ -419,30 +419,53 @@
         // Native: use Capacitor Browser to open the OAuth URL
         const { Browser } = await import('@capacitor/browser');
 
-        // Listen for auth state changes – once we have a session, redirect to index
-        supabase.auth.onAuthStateChange((event, session) => {
-          if (session && googleAuthInProgress) {
-            googleAuthInProgress = false;
-            window.location.href = 'index.html';
-          }
-        });
-
-        // Get the OAuth URL (Supabase handles PKCE automatically)
+        // Get the OAuth URL
         const { data: { url } } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: 'chess3d://oauth',  // deep‑link back to app
-            skipBrowserRedirect: true,      // we open the URL ourselves
+            redirectTo: 'chess3d://oauth',
+            skipBrowserRedirect: true,
           },
         });
 
         if (!url) throw new Error('Could not get OAuth URL');
 
+        // Listen for the browser close – it will contain the callback URL
+        Browser.addListener('browserFinished', async (info) => {
+          try {
+            // The callback URL is in info.url (e.g., chess3d://oauth?code=xxx&state=yyy)
+            const urlObj = new URL(info.url);
+            const code = urlObj.searchParams.get('code');
+
+            if (!code) {
+              throw new Error('No authorization code received.');
+            }
+
+            // Exchange the code for a session
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            if (exchangeError) throw exchangeError;
+
+            // Session is now stored – redirect to main page
+            window.location.href = 'index.html';
+          } catch (e) {
+            errEl.textContent = e.message || 'Failed to complete sign-in.';
+            errEl.classList.add('show');
+          } finally {
+            googleAuthInProgress = false;
+          }
+        });
+
         // Open the URL in an in‑app browser tab
         await Browser.open({ url });
 
-        // The browser will close when the redirect to chess3d:// is detected.
-        // The auth state change listener above will handle the rest.
+        // Fallback timeout in case the browser never closes
+        setTimeout(() => {
+          if (googleAuthInProgress) {
+            googleAuthInProgress = false;
+            errEl.textContent = 'Sign-in timed out. Please try again.';
+            errEl.classList.add('show');
+          }
+        }, 120000);
 
       } catch (e) {
         errEl.textContent = e.message || 'Google authentication failed.';
