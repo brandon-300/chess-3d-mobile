@@ -60,7 +60,7 @@ jobs:
       # ── 8. Configure native Google Sign‑In (strings.xml) ───────────────
       - name: Add Google Sign‑In server client ID
         run: |
-          echo '<string name="server_client_id">573916642453-ec37akr403j0n995le7ip62bs7cfblo2.apps.googleusercontent.com</string>' >> android/app/src/main/res/values/strings.xml
+          echo '<string name="server_client_id">573916642453-eikeo4g465eei6meea6ith8oj4a69eeg.apps.googleusercontent.com</string>' >> android/app/src/main/res/values/strings.xml
 
       # ── 9. Configure native Google Sign‑In (build.gradle) ─────────────
       - name: Add Google Sign‑In dependency
