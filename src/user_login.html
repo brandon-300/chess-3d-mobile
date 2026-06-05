@@ -343,8 +343,18 @@
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Read from sessionStorage — survives page navigations inside the WebView
-    const isNative = sessionStorage.getItem('isCapacitorNative') === '1';
+    // Detect native directly — don't rely on main.js having run first
+let isNative = sessionStorage.getItem('isCapacitorNative') === '1';
+if (!isNative) {
+  try {
+    const { Capacitor } = await import('https://cdn.jsdelivr.net/npm/@capacitor/core@6/dist/index.js');
+    isNative = Capacitor.isNativePlatform();
+    if (isNative) sessionStorage.setItem('isCapacitorNative', '1');
+  } catch(e) {
+    const isNative = window.location.hostname === 'localhost' 
+  || sessionStorage.getItem('isCapacitorNative') === '1';
+  }
+}
 
     const $ = id => document.getElementById(id);
     const slider = $("slider");
