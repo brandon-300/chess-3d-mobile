@@ -385,7 +385,7 @@
       }
     });
 
-    // ── Google Sign‑In (native – captures OAuth callback via deep link) ──────
+    // ── Google Sign‑In (native – in‑app browser + deep link capture) ─────────
     let googleAuthInProgress = false;
 
     $("googleSubmit").addEventListener("click", async () => {
@@ -405,12 +405,14 @@
           return;
         }
 
+        // Tell capacitor-bridge to ignore the OAuth callback
+        sessionStorage.setItem('pendingGoogleAuth', '1');
+
         const [{ Browser }, { App }] = await Promise.all([
           import('@capacitor/browser'),
           import('@capacitor/app')
         ]);
 
-        // Listen for the deep link coming back from Google
         const appUrlHandler = async (data) => {
           try {
             const urlObj = new URL(data.url);
@@ -418,16 +420,32 @@
             const code = urlObj.searchParams.get('code');
             if (!code) return;
 
+            // Exchange the code for a session
             const { error } = await supabase.auth.exchangeCodeForSession(code);
             if (error) throw error;
+
+            // Wait for the session to be fully persisted
+            let session = null;
+            for (let i = 0; i < 10; i++) {
+              const { data: { session: s } } = await supabase.auth.getSession();
+              if (s) { session = s; break; }
+              await new Promise(r => setTimeout(r, 500));
+            }
+
+            if (!session) throw new Error('Session not created after exchange.');
+
+            // Clean up
+            sessionStorage.removeItem('pendingGoogleAuth');
+            App.removeAllListeners('appUrlOpen');
 
             window.location.href = 'index.html';
           } catch (e) {
             errEl.textContent = e.message || 'Session exchange failed.';
             errEl.classList.add('show');
+            sessionStorage.removeItem('pendingGoogleAuth');
+            App.removeAllListeners('appUrlOpen');
           } finally {
             googleAuthInProgress = false;
-            App.removeAllListeners('appUrlOpen');
           }
         };
 
@@ -444,11 +462,13 @@
         if (!url) throw new Error('Could not get OAuth URL');
         await Browser.open({ url });
 
+        // Fallback timeout
         setTimeout(() => {
           if (googleAuthInProgress) {
             googleAuthInProgress = false;
             errEl.textContent = 'Sign-in timed out. Please try again.';
             errEl.classList.add('show');
+            sessionStorage.removeItem('pendingGoogleAuth');
             App.removeAllListeners('appUrlOpen');
           }
         }, 120000);
@@ -457,6 +477,7 @@
         errEl.textContent = e.message || 'Google authentication failed.';
         errEl.classList.add('show');
         googleAuthInProgress = false;
+        sessionStorage.removeItem('pendingGoogleAuth');
       }
     });
 
