@@ -7,6 +7,7 @@ import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App } from '@capacitor/app';
 
 let bridgeInitialized = false;
+let deepLinkHandle: PluginListenerHandle | null = null;
 
 export async function initializeCapacitorBridge(): Promise<void> {
   if (bridgeInitialized) return;
@@ -24,18 +25,15 @@ export async function initializeCapacitorBridge(): Promise<void> {
     console.log('Status bar configured');
 
     // 2. Listen for deep-link OAuth callbacks
-    App.addListener('appUrlOpen', (data: { url: string }) => {
+    deepLinkHandle = await App.addListener('appUrlOpen', (data: { url: string }) => {
       try {
         const urlObj = new URL(data.url);
         if (urlObj.hostname === 'oauth') {
-          // If the login page is expecting the callback, let it handle the exchange.
-          // Otherwise, just navigate to index.html (session should already be stored).
           const pending = sessionStorage.getItem('pendingGoogleAuth');
           if (pending === '1') {
             console.log('OAuth callback received while login page is active – ignoring in bridge');
             return;
           }
-          // Fallback: navigate to main page
           window.location.href = 'index.html';
         }
       } catch (_) { /* ignore malformed URLs */ }
