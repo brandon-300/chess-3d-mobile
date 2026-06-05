@@ -67,7 +67,7 @@ jobs:
         run: |
           sed -i "/dependencies {/a\    implementation 'com.google.android.gms:play-services-auth:20.7.0'" android/app/build.gradle
 
-      # ── 10. Register deep‑link scheme for OAuth ────────────────────────
+      # ── 10. Register deep‑link scheme for OAuth (kept for fallback) ───
       - name: Add chess3d:// intent filter to Android manifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
@@ -94,20 +94,29 @@ jobs:
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
 
-      # ── 12. Sync web assets ────────────────────────────────────────────
+      # ── 12. Print debug SHA‑1 (needed for Google Cloud Console) ───────
+      - name: Print debug signing key SHA‑1
+        run: |
+          echo "=================================================="
+          echo " Copy the SHA‑1 line below into your Google Cloud"
+          echo " Console under the Android client for sign‑in."
+          echo "=================================================="
+          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android 2>/dev/null | grep SHA1 || echo "Could not read debug keystore – use local signingReport instead."
+
+      # ── 13. Sync web assets ────────────────────────────────────────────
       - name: Capacitor sync
         run: npx cap sync android
 
-      # ── 13. Make Gradle wrapper executable ─────────────────────────────
+      # ── 14. Make Gradle wrapper executable ─────────────────────────────
       - name: Grant gradlew permission
         run: chmod +x android/gradlew
 
-      # ── 14. Build debug APK ────────────────────────────────────────────
+      # ── 15. Build debug APK ────────────────────────────────────────────
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      # ── 15. Upload APK artifact ────────────────────────────────────────
+      # ── 16. Upload APK artifact ────────────────────────────────────────
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
