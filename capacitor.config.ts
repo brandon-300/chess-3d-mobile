@@ -6,10 +6,16 @@ const config: CapacitorConfig = {
   webDir: 'dist',
 
   // Use HTTPS scheme in WebView (required for OAuth, Supabase)
+<<<<<<< HEAD
    server: {
    androidScheme: 'https',
    allowNavigation: ['fonts.googleapis.com', 'fonts.gstatic.com'],
 
+=======
+  server: {
+    androidScheme: 'https',
+    allowNavigation: ['fonts.googleapis.com', 'fonts.gstatic.com'],
+>>>>>>> 6ead02f38b8ff61db0062d39c96ddcac0dd2a71f
   },
 
   plugins: {
