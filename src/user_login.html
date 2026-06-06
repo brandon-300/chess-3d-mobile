@@ -309,6 +309,7 @@
       auth: {
         flowType: 'pkce',
         detectSessionInUrl: false,
+        storage: window.localStorage,   // ← must be explicitly set
       },
     });
 
