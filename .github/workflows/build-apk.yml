@@ -115,10 +115,18 @@ jobs:
 
       # ── 15. Set up signing keystore ────────────────────────────────────
       - name: Set up signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/chess3d.keystore
+          # Pass the variable as a string into base64 via a temporary file to guarantee no truncation
+          echo "$KEYSTORE_BASE64" > keystore_b64.txt
+          base64 --decode keystore_b64.txt > android/app/chess3d.keystore
+          
           echo "--- SHA1 of release keystore ---"
           keytool -list -v -keystore android/app/chess3d.keystore -alias chess3d -storepass chess3d123 2>&1
+          
+          # Clean up the base64 text file
+          rm keystore_b64.txt
 
       # ── 16. Capacitor sync ────────────────────────────────────────────
       - name: Capacitor sync
