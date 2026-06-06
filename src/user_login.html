@@ -391,7 +391,7 @@
       }
     });
 
-    // ── Google Sign‑In (appUrlOpen + pendingGoogleAuth flag) ─────────────────
+    // ── Google Sign‑In with DIAGNOSTIC LOGS ─────────────────────────────────
     let googleAuthInProgress = false;
     let appUrlHandle = null;
 
@@ -412,7 +412,6 @@
           return;
         }
 
-        // Tell capacitor-bridge to ignore the OAuth callback
         sessionStorage.setItem('pendingGoogleAuth', '1');
 
         const [{ Browser }, { App }] = await Promise.all([
@@ -420,25 +419,45 @@
           import('@capacitor/app')
         ]);
 
-        appUrlHandle = await App.addListener('appUrlOpen', async (data) => {
+        console.log("[OAUTH] Browser and App plugins loaded. Adding appUrlOpen listener...");
+
+        appUrlHandle = await App.addListener("appUrlOpen", async (data) => {
           try {
-            const urlObj = new URL(data.url);
-            if (urlObj.hostname !== 'oauth-callback') return;  // ← changed
+            console.log("[OAUTH] appUrlOpen fired:", data.url);
+
+            if (new URL(data.url).hostname !== "oauth-callback") {
+              console.log("[OAUTH] Ignored - wrong hostname");
+              return;
+            }
+
+            // Check what's in localStorage RIGHT NOW
+            const verifierKey = "sb-akrxbxzcvnspbmvgdrci-auth-token-code-verifier";
+            const verifier = localStorage.getItem(verifierKey);
+            console.log("[OAUTH] Verifier in localStorage:", verifier ? "EXISTS (" + verifier.length + " chars)" : "MISSING");
+            console.log("[OAUTH] All localStorage keys:", Object.keys(localStorage).join(", "));
 
             appUrlHandle.remove();
+            console.log("[OAUTH] Calling exchangeCodeForSession with URL:", data.url);
 
             const { error } = await supabase.auth.exchangeCodeForSession(data.url);
-            if (error) throw error;
+            if (error) {
+              console.log("[OAUTH] Exchange error:", error.message, error.status);
+              throw error;
+            }
 
+            console.log("[OAUTH] Exchange succeeded, checking session...");
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error('Session not created after exchange.');
+            console.log("[OAUTH] Session:", session ? "EXISTS" : "NULL");
 
-            sessionStorage.removeItem('pendingGoogleAuth');
-            window.location.href = 'index.html';
+            if (!session) throw new Error("Session not created after exchange.");
+            sessionStorage.removeItem("pendingGoogleAuth");
+            window.location.href = "index.html";
+
           } catch (e) {
-            errEl.textContent = e.message || 'Session exchange failed.';
-            errEl.classList.add('show');
-            sessionStorage.removeItem('pendingGoogleAuth');
+            console.log("[OAUTH] CAUGHT ERROR:", e.message);
+            errEl.textContent = e.message || "Session exchange failed.";
+            errEl.classList.add("show");
+            sessionStorage.removeItem("pendingGoogleAuth");
             googleAuthInProgress = false;
           }
         });
@@ -446,13 +465,13 @@
         const { data: { url } } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: 'com.chess3d.mobile://oauth-callback',   // ← changed
+            redirectTo: 'com.chess3d.mobile://oauth-callback',
             skipBrowserRedirect: true,
           },
         });
 
         if (!url) throw new Error('Could not get OAuth URL');
-
+        console.log("[OAUTH] Opening browser with URL:", url);
         await Browser.open({ url });
 
         setTimeout(() => {
@@ -467,6 +486,7 @@
         }, 120000);
 
       } catch (e) {
+        console.log("[OAUTH] Setup error:", e.message);
         errEl.textContent = e.message || 'Google authentication failed.';
         errEl.classList.add('show');
         googleAuthInProgress = false;
