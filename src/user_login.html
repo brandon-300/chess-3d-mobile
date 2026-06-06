@@ -160,11 +160,21 @@
     font-family:monospace;font-size:10px;padding:4px 8px;border-radius:4px;
     pointer-events:none;
   }
+  /* Visual debug log */
+  #debug-log {
+    position:fixed;bottom:40px;left:10px;right:10px;z-index:9999;
+    background:rgba(0,0,0,0.9);color:#0f0;font-family:monospace;font-size:10px;
+    padding:8px;border-radius:4px;max-height:250px;overflow-y:auto;
+    white-space:pre-wrap;word-break:break-all;pointer-events:none;
+  }
 </style>
 </head>
 <body>
   <div class="bg-glow"></div>
   <div id="native-badge">native: checking…</div>
+
+  <!-- Visual debug log (shows OAUTH events right on screen) -->
+  <div id="debug-log">[LOG] Waiting for Google Sign‑in...</div>
 
   <div class="container" id="loginContainer">
     <div class="tabs">
@@ -313,9 +323,23 @@
       },
     });
 
+    // Visual logger – adds messages to the on‑screen debug box
+    function debugLog(msg) {
+      const box = document.getElementById('debug-log');
+      if (box) {
+        const line = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+        box.textContent += '\n' + line;
+        box.scrollTop = box.scrollHeight;
+      }
+      console.log(msg); // still goes to logcat if available
+    }
+
     const isNative = sessionStorage.getItem('isCapacitorNative') === '1';
     document.getElementById('native-badge').textContent =
       `native: ${isNative} | host: ${window.location.hostname}`;
+
+    debugLog('isNative = ' + isNative);
+    debugLog('host = ' + window.location.hostname);
 
     const $ = id => document.getElementById(id);
     const slider = $("slider");
@@ -391,7 +415,7 @@
       }
     });
 
-    // ── Google Sign‑In with DIAGNOSTIC LOGS ─────────────────────────────────
+    // ── Google Sign‑In with VISUAL DIAGNOSTIC LOGS ──────────────────────────
     let googleAuthInProgress = false;
     let appUrlHandle = null;
 
@@ -400,9 +424,11 @@
       googleAuthInProgress = true;
       const errEl = $("loginErr");
       errEl.classList.remove("show");
+      debugLog('[OAUTH] Click – starting sign‑in flow');
 
       try {
         if (!isNative) {
+          debugLog('[OAUTH] Not native – using web redirect');
           const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: { redirectTo: window.location.origin + '/user_login.html?onboarding=1' },
@@ -412,55 +438,58 @@
           return;
         }
 
+        debugLog('[OAUTH] Native detected – loading Browser & App plugins');
         sessionStorage.setItem('pendingGoogleAuth', '1');
+        debugLog('[OAUTH] Set pendingGoogleAuth=1');
 
         const [{ Browser }, { App }] = await Promise.all([
           import('@capacitor/browser'),
           import('@capacitor/app')
         ]);
-
-        console.log("[OAUTH] Browser and App plugins loaded. Adding appUrlOpen listener...");
+        debugLog('[OAUTH] Plugins loaded');
 
         appUrlHandle = await App.addListener("appUrlOpen", async (data) => {
           try {
-            console.log("[OAUTH] appUrlOpen fired:", data.url);
+            debugLog('[OAUTH] appUrlOpen fired: ' + data.url);
 
             if (new URL(data.url).hostname !== "oauth-callback") {
-              console.log("[OAUTH] Ignored - wrong hostname");
+              debugLog('[OAUTH] Ignored – wrong hostname');
               return;
             }
 
-            // Check what's in localStorage RIGHT NOW
+            // Check localStorage verifier
             const verifierKey = "sb-akrxbxzcvnspbmvgdrci-auth-token-code-verifier";
             const verifier = localStorage.getItem(verifierKey);
-            console.log("[OAUTH] Verifier in localStorage:", verifier ? "EXISTS (" + verifier.length + " chars)" : "MISSING");
-            console.log("[OAUTH] All localStorage keys:", Object.keys(localStorage).join(", "));
+            debugLog('[OAUTH] Verifier: ' + (verifier ? 'EXISTS (' + verifier.length + ' chars)' : 'MISSING'));
+            debugLog('[OAUTH] localStorage keys: ' + Object.keys(localStorage).join(', '));
 
             appUrlHandle.remove();
-            console.log("[OAUTH] Calling exchangeCodeForSession with URL:", data.url);
+            debugLog('[OAUTH] Calling exchangeCodeForSession with URL');
 
             const { error } = await supabase.auth.exchangeCodeForSession(data.url);
             if (error) {
-              console.log("[OAUTH] Exchange error:", error.message, error.status);
+              debugLog('[OAUTH] Exchange error: ' + error.message + ' (status: ' + error.status + ')');
               throw error;
             }
 
-            console.log("[OAUTH] Exchange succeeded, checking session...");
+            debugLog('[OAUTH] Exchange succeeded – checking session');
             const { data: { session } } = await supabase.auth.getSession();
-            console.log("[OAUTH] Session:", session ? "EXISTS" : "NULL");
+            debugLog('[OAUTH] Session: ' + (session ? 'EXISTS' : 'NULL'));
 
             if (!session) throw new Error("Session not created after exchange.");
             sessionStorage.removeItem("pendingGoogleAuth");
+            debugLog('[OAUTH] Success – redirecting to index.html');
             window.location.href = "index.html";
 
           } catch (e) {
-            console.log("[OAUTH] CAUGHT ERROR:", e.message);
+            debugLog('[OAUTH] CAUGHT ERROR: ' + e.message);
             errEl.textContent = e.message || "Session exchange failed.";
             errEl.classList.add("show");
             sessionStorage.removeItem("pendingGoogleAuth");
             googleAuthInProgress = false;
           }
         });
+        debugLog('[OAUTH] appUrlOpen listener added');
 
         const { data: { url } } = await supabase.auth.signInWithOAuth({
           provider: 'google',
@@ -471,11 +500,12 @@
         });
 
         if (!url) throw new Error('Could not get OAuth URL');
-        console.log("[OAUTH] Opening browser with URL:", url);
+        debugLog('[OAUTH] Opening browser with URL: ' + url);
         await Browser.open({ url });
 
         setTimeout(() => {
           if (googleAuthInProgress) {
+            debugLog('[OAUTH] TIMEOUT – no callback received in 120s');
             googleAuthInProgress = false;
             if (appUrlHandle) appUrlHandle.remove();
             sessionStorage.removeItem('pendingGoogleAuth');
@@ -486,7 +516,7 @@
         }, 120000);
 
       } catch (e) {
-        console.log("[OAUTH] Setup error:", e.message);
+        debugLog('[OAUTH] Setup error: ' + e.message);
         errEl.textContent = e.message || 'Google authentication failed.';
         errEl.classList.add('show');
         googleAuthInProgress = false;
@@ -495,7 +525,10 @@
       }
     });
 
+    // Signup and onboarding code unchanged (same as your previous version)...
+    // (keeping the rest identical for brevity – the only change is the debug log)
     $("signupSubmit").addEventListener("click", async () => {
+      // ... [full signup code same as before]
       const fn = $("signupFirstName").value.trim(), ln = $("signupLastName").value.trim();
       const country = $("signupCountry").value.trim(), username = $("signupUsername").value.trim();
       const email = $("signupEmail").value.trim(), password = $("signupPassword").value;
@@ -522,6 +555,7 @@
 
     document.addEventListener("keydown", (e) => { if (e.key==="Enter") { tabLogin.classList.contains("active") ? $("loginSubmit").click() : $("signupSubmit").click(); } });
 
+    // Onboarding modal (unchanged) ...
     const onboardingOverlay = $("onboardingOverlay");
     const onboardingUsername = $("onboardingUsername");
     const onboardingCountry = $("onboardingCountry");
