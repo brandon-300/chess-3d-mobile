@@ -6,7 +6,6 @@
 <title>Chess 3D · Login</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;1,300&display=swap" rel="stylesheet">
 <style>
-  /* (keep the same CSS as before – all icons are inline SVGs) */
   :root{
     --bg:#0a0806; --card:rgba(20,14,8,.95); --panel:rgba(16,10,6,.98);
     --accent:#c9a84c; --accent2:#7a6230;
@@ -391,12 +390,13 @@
       }
     });
 
-    // ── Google Sign‑In: Browser + browserPageLoaded callback capture ─────────
-    let googleSignInInProgress = false;
+    // ── Google Sign‑In (appUrlOpen + pendingGoogleAuth flag) ─────────────────
+    let googleAuthInProgress = false;
+    let appUrlHandle = null;
 
     $("googleSubmit").addEventListener("click", async () => {
-      if (googleSignInInProgress) return;
-      googleSignInInProgress = true;
+      if (googleAuthInProgress) return;
+      googleAuthInProgress = true;
       const errEl = $("loginErr");
       errEl.classList.remove("show");
 
@@ -407,42 +407,44 @@
             options: { redirectTo: window.location.origin + '/user_login.html?onboarding=1' },
           });
           if (error) throw error;
-          googleSignInInProgress = false;
+          googleAuthInProgress = false;
           return;
         }
 
-        const { Browser } = await import('@capacitor/browser');
+        // Tell capacitor-bridge to ignore the OAuth callback
+        sessionStorage.setItem('pendingGoogleAuth', '1');
 
-        // Listen for the callback URL before the system can open it
-        Browser.addListener('browserPageLoaded', async (info) => {
-          if (!info.url) return;
-          // Detect if the URL is the OAuth callback (chess3d://oauth?...)
-          if (info.url.startsWith('chess3d://oauth')) {
-            try {
-              // Exchange the full callback URL (code + state) for a session
-              const { error } = await supabase.auth.exchangeCodeForSession(info.url);
-              if (error) throw error;
+        const [{ Browser }, { App }] = await Promise.all([
+          import('@capacitor/browser'),
+          import('@capacitor/app')
+        ]);
 
-              // Session should now be stored; confirm it
-              const { data: { session } } = await supabase.auth.getSession();
-              if (!session) throw new Error('Session not created after exchange.');
+        // Listen for the deep-link BEFORE opening the browser
+        appUrlHandle = await App.addListener('appUrlOpen', async (data) => {
+          try {
+            const urlObj = new URL(data.url);
+            if (urlObj.hostname !== 'oauth') return;
 
-              // Close the browser
-              await Browser.close();
+            appUrlHandle.remove();  // stop listening immediately
 
-              // Redirect to main page
-              window.location.href = 'index.html';
-            } catch (e) {
-              errEl.textContent = e.message || 'Session exchange failed.';
-              errEl.classList.add('show');
-              await Browser.close();
-            } finally {
-              googleSignInInProgress = false;
-            }
+            // Pass full URL (PKCE verifier is matched automatically)
+            const { error } = await supabase.auth.exchangeCodeForSession(data.url);
+            if (error) throw error;
+
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Session not created after exchange.');
+
+            sessionStorage.removeItem('pendingGoogleAuth');
+            window.location.href = 'index.html';
+          } catch (e) {
+            errEl.textContent = e.message || 'Session exchange failed.';
+            errEl.classList.add('show');
+            sessionStorage.removeItem('pendingGoogleAuth');
+            googleAuthInProgress = false;
           }
         });
 
-        // Start the OAuth flow
+        // Get the OAuth URL
         const { data: { url } } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
@@ -452,12 +454,16 @@
         });
 
         if (!url) throw new Error('Could not get OAuth URL');
+
+        // Open the browser
         await Browser.open({ url });
 
-        // Fallback timeout
+        // Timeout safety net
         setTimeout(() => {
-          if (googleSignInInProgress) {
-            googleSignInInProgress = false;
+          if (googleAuthInProgress) {
+            googleAuthInProgress = false;
+            if (appUrlHandle) appUrlHandle.remove();
+            sessionStorage.removeItem('pendingGoogleAuth');
             errEl.textContent = 'Sign-in timed out. Please try again.';
             errEl.classList.add('show');
             Browser.close();
@@ -467,7 +473,9 @@
       } catch (e) {
         errEl.textContent = e.message || 'Google authentication failed.';
         errEl.classList.add('show');
-        googleSignInInProgress = false;
+        googleAuthInProgress = false;
+        sessionStorage.removeItem('pendingGoogleAuth');
+        if (appUrlHandle) appUrlHandle.remove();
       }
     });
 
