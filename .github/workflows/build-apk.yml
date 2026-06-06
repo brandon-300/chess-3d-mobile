@@ -70,18 +70,16 @@ jobs:
       # ── 11. Configure signing in build.gradle ──────────────────────────
       - name: Configure signing in build.gradle
         run: |
-          cat >> android/app/build.gradle << 'EOF'
-
-android.signingConfigs {
-    stableDebug {
-        storeFile file(System.getenv("KEYSTORE_PATH") ?: "")
-        storePassword System.getenv("KEYSTORE_PASS") ?: ""
-        keyAlias System.getenv("KEY_ALIAS") ?: ""
-        keyPassword System.getenv("KEY_PASS") ?: ""
-    }
-}
-android.buildTypes.debug.signingConfig = android.signingConfigs.stableDebug
-EOF
+          echo "" >> android/app/build.gradle
+          echo "android.signingConfigs {" >> android/app/build.gradle
+          echo "    stableDebug {" >> android/app/build.gradle
+          echo '        storeFile file(System.getenv("KEYSTORE_PATH") ?: "")' >> android/app/build.gradle
+          echo '        storePassword System.getenv("KEYSTORE_PASS") ?: ""' >> android/app/build.gradle
+          echo '        keyAlias System.getenv("KEY_ALIAS") ?: ""' >> android/app/build.gradle
+          echo '        keyPassword System.getenv("KEY_PASS") ?: ""' >> android/app/build.gradle
+          echo "    }" >> android/app/build.gradle
+          echo "}" >> android/app/build.gradle
+          echo "android.buildTypes.debug.signingConfig = android.signingConfigs.stableDebug" >> android/app/build.gradle
 
       # ── 12. Add com.chess3d.mobile:// intent filter ────────────────────
       - name: Add com.chess3d.mobile:// intent filter to Android manifest
