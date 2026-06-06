@@ -113,20 +113,30 @@ jobs:
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
 
-      # ── 15. Set up signing keystore ────────────────────────────────────
+            # ── 15. Set up signing keystore (Diagnostic Mode) ──────────────────
       - name: Set up signing keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          # Pass the variable as a string into base64 via a temporary file to guarantee no truncation
-          echo "$KEYSTORE_BASE64" > keystore_b64.txt
-          base64 --decode keystore_b64.txt > android/app/chess3d.keystore
+          echo "--- DEBUG: Checking secret length ---"
+          # This prints the character count of your secret. 
+          # If it says 0, your secret is missing or named incorrectly!
+          echo -n "$KEYSTORE_BASE64" | wc -c
           
-          echo "--- SHA1 of release keystore ---"
+          echo "$KEYSTORE_BASE64" > keystore_b64.txt
+          
+          # Added -i to ignore any hidden line breaks or garbage characters
+          base64 -i --decode keystore_b64.txt > android/app/chess3d.keystore
+          
+          echo "--- DEBUG: Checking decoded file size ---"
+          # This shows the actual size of the keystore file
+          ls -lh android/app/chess3d.keystore
+          
+          echo "--- Running Keytool ---"
           keytool -list -v -keystore android/app/chess3d.keystore -alias chess3d -storepass chess3d123 2>&1
           
-          # Clean up the base64 text file
           rm keystore_b64.txt
+
 
       # ── 16. Capacitor sync ────────────────────────────────────────────
       - name: Capacitor sync
