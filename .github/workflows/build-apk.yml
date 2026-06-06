@@ -118,8 +118,7 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/chess3d.keystore
           echo "--- SHA1 of release keystore ---"
-          keytool -list -v -keystore android/app/chess3d.keystore \
-            -alias chess3d -storepass chess3d123 | grep SHA1
+          keytool -list -v -keystore android/app/chess3d.keystore -alias chess3d -storepass chess3d123 2>&1
 
       # ── 16. Capacitor sync ────────────────────────────────────────────
       - name: Capacitor sync
