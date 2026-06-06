@@ -113,21 +113,20 @@ jobs:
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
 
-            # ── 15. Set up signing keystore ────────────────────────────────────
-- name: Set up signing keystore
-  env:
-    KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
-  run: |
-    # Decode the environment variable directly
-    echo "$KEYSTORE_B64" | base64 -d > android/app/chess3d-release.keystore
-
-    # Verify file exists
-    ls -lh android/app/chess3d-release.keystore
-
-    # Final sanity check
-    keytool -list -v -keystore android/app/chess3d-release.keystore -alias chess3d -storepass chess3d123
-
-
+                  # ── 15. Set up signing keystore ────────────────────────────────────
+      - name: Set up signing keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          # Use base64 -d to decode the environment variable directly.
+          # The | pipe is the safest way to avoid newline/spacing issues.
+          echo "$KEYSTORE_B64" | base64 -d > android/app/chess3d-release.keystore
+          
+          # Final safety check: ensure the file exists and has size
+          ls -lh android/app/chess3d-release.keystore
+          
+          # Verify keystore integrity
+          keytool -list -v -keystore android/app/chess3d-release.keystore -alias chess3d -storepass chess3d123
 
       # ── 16. Capacitor sync ────────────────────────────────────────────
       - name: Capacitor sync
