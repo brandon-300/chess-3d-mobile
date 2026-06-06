@@ -309,7 +309,7 @@
       auth: {
         flowType: 'pkce',
         detectSessionInUrl: false,
-        storage: window.localStorage,   // ← must be explicitly set
+        storage: window.localStorage,
       },
     });
 
@@ -420,15 +420,13 @@
           import('@capacitor/app')
         ]);
 
-        // Listen for the deep-link BEFORE opening the browser
         appUrlHandle = await App.addListener('appUrlOpen', async (data) => {
           try {
             const urlObj = new URL(data.url);
-            if (urlObj.hostname !== 'oauth') return;
+            if (urlObj.hostname !== 'oauth-callback') return;  // ← changed
 
-            appUrlHandle.remove();  // stop listening immediately
+            appUrlHandle.remove();
 
-            // Pass full URL (PKCE verifier is matched automatically)
             const { error } = await supabase.auth.exchangeCodeForSession(data.url);
             if (error) throw error;
 
@@ -445,21 +443,18 @@
           }
         });
 
-        // Get the OAuth URL
         const { data: { url } } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: 'chess3d://oauth',
+            redirectTo: 'com.chess3d.mobile://oauth-callback',   // ← changed
             skipBrowserRedirect: true,
           },
         });
 
         if (!url) throw new Error('Could not get OAuth URL');
 
-        // Open the browser
         await Browser.open({ url });
 
-        // Timeout safety net
         setTimeout(() => {
           if (googleAuthInProgress) {
             googleAuthInProgress = false;
