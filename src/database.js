@@ -10,7 +10,13 @@ let sbStatus = 'Loading...';
 export { sb };
 
 try {
-  sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      flowType: 'pkce',
+      detectSessionInUrl: false,
+      storage: window.localStorage,   // ← critical for PKCE verifier persistence
+    },
+  });
   sbStatus = 'Loaded';
 } catch (e) {
   sbStatus = 'Error: ' + e.message;
